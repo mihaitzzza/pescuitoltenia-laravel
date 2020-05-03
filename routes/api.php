@@ -28,4 +28,10 @@ Route::middleware('auth')->group(function() {
     Route::resource('files', 'FilesController');
     Route::middleware('checkArticleAccess')
         ->resource('articles', 'ArticlesController');
+    Route::get('/dashboard', 'DashboardController@getData');
+});
+
+Route::prefix('app')->group(function() {
+    Route::get('articles', 'ArticlesController@getAll');
+    Route::get('articles/{id}', 'ArticlesController@getOne');
 });

@@ -476,3 +476,5 @@ composer.lock
 
 migrations/
 .idea/
+public/uploads
+storage/uploads

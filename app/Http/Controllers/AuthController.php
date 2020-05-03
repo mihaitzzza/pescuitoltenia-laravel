@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Log;
 use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,8 +41,10 @@ class AuthController extends Controller
             'password' => $params->get('password'),
         ];
 
+        Log::info($credentials);
+
         if ($token = $this->guard()->attempt($credentials)) {
-            $user = User::find(Auth::user()->id)->with('roles')->first();
+            $user = User::findOrFail(Auth::user()->id)->load('roles');
 
             return response()->json([
                 'token' => $token,

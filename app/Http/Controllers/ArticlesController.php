@@ -18,8 +18,16 @@ class ArticlesController extends Controller
      */
     public function index()
     {
+        $user = User::findOrFail(Auth::user()->id);
+        $articles = Article::with('author')->orderBy('created_at', 'desc');
+
+        if (!$user->isAdmin())
+        {
+            $articles->where('author_id', $user->id);
+        }
+
         return response()->json([
-            'articles' => Article::all()->load('author')
+            'articles' => $articles->get()
         ], 200);
     }
 
@@ -50,11 +58,11 @@ class ArticlesController extends Controller
 
         // Store cover image.
         $file = $request->file('cover');;
-        $path = $file->store('uploads/articles/covers', ['disk' => 'public']);
+        $path = $file->store('articles/covers', ['disk' => 'poPublic']);
 
         // Store content in text file.
         $uniqueContentName = uniqid();
-        $contentPath = 'uploads/articles/content/'.$uniqueContentName.'.txt';
+        $contentPath = 'articles/content/'.$uniqueContentName.'.txt';
         Storage::disk('public')
             ->put($contentPath, $request->get('content'));
 
@@ -128,12 +136,12 @@ class ArticlesController extends Controller
         $path = null;
         if ($coverImage)
         {
-            $path = $coverImage->store('uploads/articles/covers', ['disk' => 'public']);
+            $path = $coverImage->store('articles/covers', ['disk' => 'poPublic']);
         }
 
         // Store content in text file.
         $uniqueContentName = uniqid();
-        $contentPath = 'uploads/articles/content/'.$uniqueContentName.'.txt';
+        $contentPath = 'articles/content/'.$uniqueContentName.'.txt';
         Storage::disk('public')
             ->put($contentPath, $request->get('content'));
 
@@ -164,6 +172,34 @@ class ArticlesController extends Controller
 
         return response()->json([
             'ok' => true
+        ], 200);
+    }
+
+    public function getAll()
+    {
+        $articles = Article::all();
+
+        foreach($articles as $article)
+        {
+            $content = Storage::disk('public')->get($article->content);
+            $article->content = strip_tags($content);
+        }
+
+        return response()->json([
+            'articles' => $articles
+        ], 200);
+    }
+
+    public function getOne($id)
+    {
+        $article = Article::findOrFail($id);
+
+        $content = Storage::disk('public')->get($article->content);
+        $article->content = $content;
+        $article->description = strip_tags($content);
+
+        return response()->json([
+            'article' => $article->load('author')
         ], 200);
     }
 }
