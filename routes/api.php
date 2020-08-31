@@ -23,14 +23,18 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+// This is used for logged-in users.
 Route::middleware('auth')->group(function() {
     Route::get('users/{id}', 'UsersController@show');
     Route::resource('files', 'FilesController');
-    Route::middleware('checkArticleAccess')
-        ->resource('articles', 'ArticlesController');
+    Route::middleware('checkArticleAccess')->group(function () {
+        Route::resource('articles', 'ArticlesController');
+        Route::post('articles/{id}/publish', 'ArticlesController@publish');
+    });
     Route::get('/dashboard', 'DashboardController@getData');
 });
 
+// This is used for non-logged-in users.
 Route::prefix('app')->group(function() {
     Route::get('articles', 'ArticlesController@getAll');
     Route::get('articles/{id}', 'ArticlesController@getOne');

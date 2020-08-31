@@ -77,14 +77,23 @@ class AuthController extends Controller
 
     public function refresh()
     {
-        if ($token = $this->guard()->refresh()) {
+        try
+        {
+            $token = $this->guard()->refresh();
+        }
+        catch (\Exception $e)
+        {
+            return response()->json(['message' => 'token_not_refreshable'], 401);
+        }
+
+        if ($token) {
             return response()
                 ->json([
                     'token' => $token
                 ], 201);
         }
 
-        return response()->json(['error' => 'refresh_token_error'], 401);
+        return response()->json(['message' => 'refresh_token_error'], 401);
     }
 
     private function guard()

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -55,6 +56,7 @@ class ArticlesController extends Controller
             'cover' => 'required|image',
             'content' => 'required|string'
         ]);
+        $shouldPublish = filter_var($request->get('publishArticle'), FILTER_VALIDATE_BOOLEAN);
 
         // Store cover image.
         $file = $request->file('cover');;
@@ -72,15 +74,8 @@ class ArticlesController extends Controller
         $article->cover = $path;
         $article->content = $contentPath;
         $article->author_id = Auth::user()->id;
+        $article->published_at = $shouldPublish ? Carbon::now() : null;
         $article->save();
-
-        /*$ptn = '/<img src=\"([^\"]+)\">/';
-        preg_match_all($ptn, $request->get('content'), $matches);
-
-        foreach ($matches[1] as $base64Image)
-        {
-            Log::info($base64Image);
-        }*/
 
         return response()->json([
             'article' => $article->load('author')
@@ -177,7 +172,9 @@ class ArticlesController extends Controller
 
     public function getAll()
     {
-        $articles = Article::all();
+        $articles = Article::whereNotNull('published_at')
+            ->orderBy('published_at', 'desc')
+            ->get();
 
         foreach($articles as $article)
         {
@@ -190,9 +187,37 @@ class ArticlesController extends Controller
         ], 200);
     }
 
+    public function publish($id)
+    {
+        $article = Article::findOrFail($id);
+
+        if ($article->published_at)
+        {
+            return response()->json([
+                'message' => 'This article was already published.'
+            ], 404);
+        }
+
+        $published_at = Carbon::now();
+        $article->published_at = $published_at;
+        $article->save();
+
+        return response()->json([
+            'ok' => true,
+            'published_at' => $published_at
+        ], 200);
+    }
+
     public function getOne($id)
     {
         $article = Article::findOrFail($id);
+
+        if (!$article->published_at)
+        {
+            return response()->json([
+                'message' => 'This article is not published.'
+            ], 403);
+        }
 
         $content = Storage::disk('public')->get($article->content);
         $article->content = $content;
